@@ -1,15 +1,22 @@
+// import * as Template from './template';
+import Template from './template';
+
 export default class Interface {
     constructor(props) {
         this.main = props.main;
         this.container = null;
         this.lesson_section = null;
 
+        this.container_title = 'Скачать курс';
+
+
+        this.template = Template(this);
+
         this.init();
     }
 
     createContainer() {
-        this.container = document.createElement('div');
-        this.container.className = 'standard-block';
+        this.container = this.template.container();
 
         this.lesson_section.after(this.container);
     }
