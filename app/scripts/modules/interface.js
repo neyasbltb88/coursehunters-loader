@@ -21,6 +21,14 @@ export default class Interface {
         this.lesson_section.after(this.container);
     }
 
+    lessonRender(index) {
+        this.template.lessonRender(index);
+    }
+
+    lessonsRender() {
+        this.template.lessonsRender();
+    }
+
 
     init() {
         console.log('%c%s', (window.log_color) ? window.log_color.blue : '', `*CourseLoader* Interface init`);
@@ -29,6 +37,6 @@ export default class Interface {
 
         this.createContainer();
 
-        this.main.init();
+        requestAnimationFrame(() => this.main.init());
     }
 }
