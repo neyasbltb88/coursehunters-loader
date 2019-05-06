@@ -21,12 +21,12 @@ export default class Interface {
         this.lesson_section.after(this.container);
     }
 
-    lessonRender(index) {
-        this.template.lessonRender(index);
-    }
-
-    lessonsRender() {
-        this.template.lessonsRender();
+    render(index) {
+        if (index) {
+            this.template.lessonRender(index);
+        } else {
+            this.template.render();
+        }
     }
 
 

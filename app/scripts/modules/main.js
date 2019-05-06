@@ -2,12 +2,20 @@ import Interface from './interface';
 
 export default class Main {
     constructor() {
-        this.lessons = [];
+        this.state = {
+            lessons: [],
+        };
 
         this.interface = new Interface({
             main: this,
         });
 
+    }
+
+    setState(new_state) {
+        Object.assign(this.state, new_state);
+
+        this.interface.render();
     }
 
     fileNameNormalize(value) {
@@ -30,9 +38,10 @@ export default class Main {
     }
 
     collectLessonData() {
-        let lessons = document.querySelectorAll('#lessons-list li');
+        let lesson_elems = document.querySelectorAll('#lessons-list li');
+        let lessons = [];
 
-        lessons.forEach(lesson => {
+        lesson_elems.forEach(lesson => {
             let lesson_data = {};
             let lesson_name = lesson.querySelector('[itemprop="name"]').textContent;
             lesson_data.name = this.fileNameNormalize(lesson_name);
@@ -40,16 +49,20 @@ export default class Main {
             lesson_data.size = undefined;
             lesson_data.progress = 0;
 
-            this.lessons.push(lesson_data);
+            lessons.push(lesson_data);
         });
+
+        return lessons;
     }
 
     init() {
         console.log('%c%s', (window.log_color) ? window.log_color.blue : '', `*CourseLoader* init`);
 
-        this.collectLessonData();
+        let new_state = {
+            lessons: this.collectLessonData()
+        };
 
-        this.interface.lessonsRender();
+        this.setState(new_state);
 
     }
 }

@@ -43,7 +43,7 @@ export default function Template(that) {
         },
 
         lessonRender(index) {
-            let lesson = this.main.lessons[index];
+            let lesson = this.main.state.lessons[index];
 
             let li = document.createElement('li');
             li.className = 'lessons-list__li';
@@ -64,8 +64,8 @@ export default function Template(that) {
             }
         },
 
-        lessonsRender() {
-            this.main.lessons.forEach((lesson, index) => this.lessonRender(index));
+        render() {
+            this.main.state.lessons.forEach((lesson, index) => fn.lessonRender(index));
         }
     };
 
