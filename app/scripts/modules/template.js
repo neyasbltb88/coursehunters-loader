@@ -1,9 +1,9 @@
 export default function Template(that) {
     let fn = {
-        container() {
-            let container = document.createElement('div');
-            container.className = 'standard-block course_loader_container';
-            container.innerHTML = /* html */ `
+            container() {
+                let container = document.createElement('div');
+                container.className = 'standard-block course_loader_container';
+                container.innerHTML = /* html */ `
                 <h2>${this.container_title}</h2>
                 <details open>
                     <summary>
@@ -39,19 +39,20 @@ export default function Template(that) {
                 </style>
             `;
 
-            return container;
-        },
+                return container;
+            },
 
-        lessonRender(index) {
-            let lesson = this.main.state.lessons[index];
+            lessonRender(index) {
+                let lesson = this.main.state.lessons[index];
 
-            let li = document.createElement('li');
-            li.className = 'lessons-list__li';
-            li.dataset.lessonIndex = index;
-            li.innerHTML = /* html */ `
+                let li = document.createElement('li');
+                li.className = 'lessons-list__li';
+                li.dataset.lessonIndex = index;
+                li.innerHTML = /* html */ `
                 <progress class="lessons-list__progress" max="100" value="${lesson.progress}"></progress>
                 <span itemprop="name">${lesson.name}</span>
-                <em class="progress_value">${lesson.progress}%</em>
+
+                <em>${lesson.size_loaded ? /* html */`<span class="size_loaded">${window.utils.FileSize(lesson.size_loaded)}</span>/` : ''}${lesson.size_total ? /* html */`<span class="size_total">${window.utils.FileSize(lesson.size_total)}</span>` : ''}${lesson.progress ? /* html */`<span class="progress_value">(${lesson.progress}%)</span>` : ''}</em>
             `;
 
             let ul = this.container.querySelector('.lessons-list');

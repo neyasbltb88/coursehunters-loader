@@ -14,7 +14,6 @@ export default class Main {
 
     setState(new_state) {
         Object.assign(this.state, new_state);
-
         this.interface.render();
     }
 
@@ -46,8 +45,11 @@ export default class Main {
             let lesson_name = lesson.querySelector('[itemprop="name"]').textContent;
             lesson_data.name = this.fileNameNormalize(lesson_name);
             lesson_data.url = lesson.querySelector('[itemprop="url"]').href;
-            lesson_data.size = undefined;
+            lesson_data.size_loaded = 0;
+            lesson_data.size_total = 0;
             lesson_data.progress = 0;
+            lesson_data.is_loaded = false;
+            lesson_data.is_loading = false;
 
             lessons.push(lesson_data);
         });
@@ -55,14 +57,24 @@ export default class Main {
         return lessons;
     }
 
+    async collectSizeTotal(index = 0) {
+        let lesson = this.state.lessons[index];
+        lesson.size_total = await loader.getSizeTotal(lesson.url);
+
+        index++;
+        if (index < this.state.lessons.length) {
+            this.collectSizeTotal(index);
+        } else {
+            this.setState(this.state);
+        }
+    }
+
     init() {
         console.log('%c%s', (window.log_color) ? window.log_color.blue : '', `*CourseLoader* init`);
 
-        let new_state = {
-            lessons: this.collectLessonData()
-        };
+        let lessons = this.collectLessonData();
+        this.setState({ lessons });
 
-        this.setState(new_state);
-
+        this.collectSizeTotal();
     }
 }
