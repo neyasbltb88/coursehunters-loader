@@ -31,7 +31,7 @@ export default class Main {
             '|': ' l ',
         };
 
-        new_value = new_value.map(char => template[char] ? template[char] : char);
+        new_value = new_value.map(char => template[char] || char);
 
         return new_value.join('');
     }
@@ -43,6 +43,8 @@ export default class Main {
         lesson_elems.forEach(lesson => {
             let lesson_data = {};
             let lesson_name = lesson.querySelector('[itemprop="name"]').textContent;
+
+            lesson_data.index = lessons.length;
             lesson_data.name = this.fileNameNormalize(lesson_name);
             lesson_data.url = lesson.querySelector('[itemprop="url"]').href;
             lesson_data.size_loaded = 0;
@@ -50,6 +52,7 @@ export default class Main {
             lesson_data.progress = 0;
             lesson_data.is_loaded = false;
             lesson_data.is_loading = false;
+            lesson_data.is_checked = true;
 
             lessons.push(lesson_data);
         });
@@ -59,14 +62,23 @@ export default class Main {
 
     async collectSizeTotal(index = 0) {
         let lesson = this.state.lessons[index];
-        lesson.size_total = await loader.getSizeTotal(lesson.url);
+        let size_total = await loader.request(lesson.url, { method: 'HEAD' });
+        lesson.size_total = size_total.total;
 
         index++;
-        if (index < this.state.lessons.length) {
+        if (index < this.state.lessons.length && !this.state.lessons[index].size_total) {
             this.collectSizeTotal(index);
-        } else {
+        } else if (index >= this.state.lessons.length) {
             this.setState(this.state);
         }
+    }
+
+    loadProgress(index, e) {
+
+    }
+
+    loadLesson(index) {
+
     }
 
     init() {
