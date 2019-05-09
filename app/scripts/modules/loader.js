@@ -4,10 +4,11 @@ export default class Loader {
         this.xhr_counter = 0;
     }
 
-    request(url, { method, responseType }, progressCallback) {
+    request(url, { method = 'GET', responseType = 'text' } = {}, progressCallback = () => {}) {
         let xhr_index = this.xhr_counter++;
         this.xhr[xhr_index] = new XMLHttpRequest();
-        this.xhr[xhr_index].responseType = responseType || 'text';
+        // this.xhr[xhr_index].responseType = responseType || 'text';
+        this.xhr[xhr_index].responseType = responseType;
 
         this.xhr[xhr_index].addEventListener('progress', e => {
             if (typeof progressCallback === 'function') progressCallback(e);
@@ -34,5 +35,14 @@ export default class Loader {
             this.xhr[xhr_index].open(method, url, true);
             this.xhr[xhr_index].send();
         });
+    }
+
+    abort() {
+        for (let _xhr in this.xhr) {
+            this.xhr[_xhr].abort();
+            delete this.xhr[_xhr];
+        }
+
+        return true;
     }
 }

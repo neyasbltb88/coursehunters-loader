@@ -4,6 +4,7 @@ export default class Main {
     constructor() {
         this.state = {
             lessons: [],
+            is_loading: false,
         };
 
         this.interface = new Interface({
@@ -74,11 +75,104 @@ export default class Main {
     }
 
     loadProgress(index, e) {
+        let loaded = e.loaded;
+        let total = e.total;
+        let progress = window.utils.Percent(loaded, e.total, 0);
+        let state = Object.assign({}, this.state);
 
+        state.lessons[index].size_total = total;
+        state.lessons[index].size_loaded = loaded;
+        state.lessons[index].progress = progress;
+
+        this.setState(state);
     }
 
-    loadLesson(index) {
+    loadLoaded(index, e) {
+        console.log('loded_event: ', index, e);
 
+        let state = Object.assign({}, this.state);
+        state.lessons[index].is_loaded = true;
+        state.lessons[index].is_loading = false;
+
+        //TODO: Тут надо вызывать сохранение в файл
+
+        this.setState(state);
+    }
+
+    loadEnd() {
+        console.log('loadLoop завершен');
+
+        let state = Object.assign({}, this.state);
+        state.is_loading = false;
+        this.setState(state);
+    }
+
+
+    async loadLesson(index) {
+        if (index === undefined) return;
+
+        let lesson = this.state.lessons[index];
+        let loded_event;
+        lesson.is_loading = true;
+
+        try {
+            loded_event = await window.loader.request(lesson.url, {
+                // responseType: 'arraybuffer',
+                responseType: 'blob',
+            }, this.loadProgress.bind(this, index));
+        } catch (error) {
+            console.log('Ошибка загрузки: ', error);
+
+            if (error.type === 'abort') {
+                let state = Object.assign({}, this.state);
+                state.is_loading = false;
+                state.lessons.map(lesson => {
+                    if (lesson.is_loading) {
+                        lesson.is_loading = false;
+                        lesson.progress = 0;
+                        lesson.size_loaded = 0;
+                    }
+
+                    return lesson;
+                });
+
+                this.setState(state);
+                return false;
+            }
+
+        }
+
+        this.loadLoaded(index, loded_event)
+
+        this.loadLoop();
+    }
+
+    async loadLoop() {
+        let index;
+        for (let i = 0; i < this.state.lessons.length; i++) {
+            let lesson = this.state.lessons[i];
+            if (lesson && lesson.is_checked && !lesson.is_loaded && !lesson.is_loading) {
+                index = i;
+                this.loadLesson(index);
+                break;
+            }
+        }
+
+        if (index === undefined) {
+            this.loadEnd();
+        }
+    }
+
+    loadStart() {
+        let state = Object.assign({}, this.state);
+        state.is_loading = true;
+        this.setState(state);
+
+        this.loadLoop();
+    }
+
+    loadStop() {
+        window.loader.abort();
     }
 
     init() {
