@@ -15,7 +15,9 @@
     ],
     "author": "neyasbltb_88",
     "license": "ISC",
-    "dependencies": {},
+    "dependencies": {
+        "downloadjs": "^1.4.7"
+    },
     "devDependencies": {
         "@babel/core": "^7.4.3",
         "@babel/plugin-transform-regenerator": "^7.4.3",

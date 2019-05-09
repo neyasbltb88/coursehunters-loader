@@ -94,7 +94,7 @@ export default class Main {
         state.lessons[index].is_loaded = true;
         state.lessons[index].is_loading = false;
 
-        //TODO: Тут надо вызывать сохранение в файл
+        window.Downloader(e.target.response, state.lessons[index].name + '.mp4', 'video/mp4');
 
         this.setState(state);
     }
