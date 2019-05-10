@@ -5,6 +5,7 @@ export default class Main {
         this.state = {
             lessons: [],
             is_loading: false,
+            is_open: true,
         };
 
         this.interface = new Interface({

@@ -5,7 +5,7 @@ export default function Template(that) {
                 container.className = 'standard-block course_loader_container';
                 container.innerHTML = /* html */ `
         <h2>${this.text.container_title}</h2>
-        <details open>
+        <details ${this.main.state.is_open ? 'open' : ''}>
             <summary>
                 <span class="lessons-list__more">Развернуть / Свернуть</span>
             </summary>
