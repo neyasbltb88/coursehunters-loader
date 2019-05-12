@@ -4,11 +4,10 @@ export default class Loader {
         this.xhr_counter = 0;
     }
 
-    request(url, { method = 'GET', responseType = 'text' } = {}, progressCallback = () => {}) {
+    request(url, { method = 'GET', responseType } = {}, progressCallback = () => {}) {
         let xhr_index = this.xhr_counter++;
         this.xhr[xhr_index] = new XMLHttpRequest();
-        // this.xhr[xhr_index].responseType = responseType || 'text';
-        this.xhr[xhr_index].responseType = responseType;
+        if (responseType) this.xhr[xhr_index].responseType = responseType;
 
         this.xhr[xhr_index].addEventListener('progress', e => {
             if (typeof progressCallback === 'function') progressCallback(e);

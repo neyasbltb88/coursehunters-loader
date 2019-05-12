@@ -107,7 +107,6 @@ export default class Interface {
         let btn = this.template.btn();
         btn.addEventListener('click', this.handlerBtn.bind(this));
 
-        // this.outputRender('.btn_container', btn);
         this.outputRender('.btn_container', btn, true);
     }
 

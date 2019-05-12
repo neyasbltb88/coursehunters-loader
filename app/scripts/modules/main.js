@@ -1,4 +1,5 @@
 import Interface from './interface';
+import SStorage from './storage';
 
 export default class Main {
     constructor() {
@@ -12,10 +13,16 @@ export default class Main {
             main: this,
         });
 
+        // this.storage = new SStorage('test', this.state);
     }
 
     setState(new_state) {
         Object.assign(this.state, new_state);
+
+        // for (let prop in this.state) {
+        //     this.storage.set(prop, JSON.stringify(this.state[prop]));
+        // }
+
         this.interface.render();
     }
 
@@ -38,6 +45,14 @@ export default class Main {
         return new_value.join('');
     }
 
+    fileNameExt(url) {
+        // https://regex101.com/r/fIgKBo/1
+        const regex = /.*(\.\w*)/i;
+        let res = url.match(regex);
+
+        return res[1];
+    }
+
     collectLessonData() {
         let lesson_elems = document.querySelectorAll('#lessons-list li');
         let lessons = [];
@@ -47,8 +62,10 @@ export default class Main {
             let lesson_name = lesson.querySelector('[itemprop="name"]').textContent;
 
             lesson_data.index = lessons.length;
-            lesson_data.name = this.fileNameNormalize(lesson_name);
             lesson_data.url = lesson.querySelector('[itemprop="url"]').href;
+            lesson_data.name = this.fileNameNormalize(lesson_name);
+            lesson_data.ext = this.fileNameExt(lesson_data.url);
+            lesson_data.mime = '';
             lesson_data.size_loaded = 0;
             lesson_data.size_total = 0;
             lesson_data.progress = 0;
@@ -66,6 +83,7 @@ export default class Main {
         let lesson = this.state.lessons[index];
         let size_total = await loader.request(lesson.url, { method: 'HEAD' });
         lesson.size_total = size_total.total;
+        lesson.mime = size_total.target.getResponseHeader('Content-Type');
 
         index++;
         if (index < this.state.lessons.length && !this.state.lessons[index].size_total) {
@@ -92,10 +110,12 @@ export default class Main {
         console.log('loded_event: ', index, e);
 
         let state = Object.assign({}, this.state);
-        state.lessons[index].is_loaded = true;
-        state.lessons[index].is_loading = false;
+        let lesson = state.lessons[index];
 
-        window.Downloader(e.target.response, state.lessons[index].name + '.mp4', 'video/mp4');
+        lesson.is_loaded = true;
+        lesson.is_loading = false;
+
+        window.Downloader(new Blob([e.target.response]), lesson.name + lesson.ext, lesson.mime);
 
         this.setState(state);
     }
@@ -118,9 +138,11 @@ export default class Main {
 
         try {
             loded_event = await window.loader.request(lesson.url, {
-                // responseType: 'arraybuffer',
-                responseType: 'blob',
+                responseType: 'arraybuffer',
+                // responseType: 'blob',
             }, this.loadProgress.bind(this, index));
+
+            this.loadLoaded(index, loded_event);
         } catch (error) {
             console.log('Ошибка загрузки: ', error);
 
@@ -142,8 +164,6 @@ export default class Main {
             }
 
         }
-
-        this.loadLoaded(index, loded_event)
 
         this.loadLoop();
     }
