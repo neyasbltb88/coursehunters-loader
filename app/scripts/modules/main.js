@@ -3,6 +3,8 @@ import SStorage from './storage';
 
 export default class Main {
     constructor() {
+        this.id = null;
+
         this.state = {
             lessons: [],
             is_loading: false,
@@ -13,7 +15,7 @@ export default class Main {
             main: this,
         });
 
-        // this.storage = new SStorage('test', this.state);
+        this.storage = null;
     }
 
     setState(new_state) {
@@ -53,6 +55,13 @@ export default class Main {
         return res[1];
     }
 
+    collectCourseData() {
+        let course_id = document.querySelector('.standard-block[data-id]').dataset.id;
+        let course_name = document.querySelector('.breadcrumbs__a_active').textContent;
+
+        this.id = `id_${course_id}` || course_name;
+    }
+
     collectLessonData() {
         let lesson_elems = document.querySelectorAll('#lessons-list li');
         let lessons = [];
@@ -78,6 +87,34 @@ export default class Main {
 
         return lessons;
     }
+
+    // --- Хранилище ---
+    storeLessonSave(index) {
+        let lessons = this.storage.get('lessons');
+        console.log(lessons);
+
+        if (!lessons[index]) lessons[index] = {};
+
+        lessons[index].is_loaded = true;
+        lessons[index].progress = 100;
+
+        this.storage.set('lessons', lessons);
+    }
+
+    storeLessonRestore() {
+        let lessons = this.storage.get('lessons');
+
+        lessons.forEach((lesson, i) => {
+            if (lesson) {
+                this.state.lessons[i].is_loaded = lesson.is_loaded;
+                this.state.lessons[i].progress = lesson.progress;
+            }
+        });
+
+        this.setState(this.state);
+    }
+
+    // === Хранилище ===
 
     async collectSizeTotal(index = 0) {
         let lesson = this.state.lessons[index];
@@ -116,6 +153,8 @@ export default class Main {
         lesson.is_loading = false;
 
         window.Downloader(new Blob([e.target.response]), lesson.name + lesson.ext, lesson.mime);
+
+        this.storeLessonSave(index);
 
         this.setState(state);
     }
@@ -199,8 +238,14 @@ export default class Main {
     init() {
         console.log('%c%s', (window.log_color) ? window.log_color.blue : '', `*CourseLoader* init`);
 
+        this.collectCourseData();
+
+        this.storage = new SStorage(this.id, this.state);
+
         let lessons = this.collectLessonData();
         this.setState({ lessons });
+
+        this.storeLessonRestore();
 
         this.collectSizeTotal();
     }
