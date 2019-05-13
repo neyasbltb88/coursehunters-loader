@@ -21,10 +21,6 @@ export default class Main {
     setState(new_state) {
         Object.assign(this.state, new_state);
 
-        // for (let prop in this.state) {
-        //     this.storage.set(prop, JSON.stringify(this.state[prop]));
-        // }
-
         this.interface.render();
     }
 
@@ -91,12 +87,9 @@ export default class Main {
     // --- Хранилище ---
     storeLessonSave(index) {
         let lessons = this.storage.get('lessons');
-        console.log(lessons);
-
         if (!lessons[index]) lessons[index] = {};
 
-        lessons[index].is_loaded = true;
-        lessons[index].progress = 100;
+        lessons[index].size_total = this.state.lessons[index].size_total;
 
         this.storage.set('lessons', lessons);
     }
@@ -104,12 +97,12 @@ export default class Main {
     storeLessonRestore() {
         let lessons = this.storage.get('lessons');
 
-        lessons.forEach((lesson, i) => {
-            if (lesson) {
-                this.state.lessons[i].is_loaded = lesson.is_loaded;
-                this.state.lessons[i].progress = lesson.progress;
-            }
-        });
+        for (let index in lessons) {
+            this.state.lessons[index].is_loaded = true;
+            this.state.lessons[index].progress = 100;
+            this.state.lessons[index].size_total = lessons[index].size_total;
+            this.state.lessons[index].size_loaded = lessons[index].size_total;
+        }
 
         this.setState(this.state);
     }
@@ -123,7 +116,7 @@ export default class Main {
         lesson.mime = size_total.target.getResponseHeader('Content-Type');
 
         index++;
-        if (index < this.state.lessons.length && !this.state.lessons[index].size_total) {
+        if (index < this.state.lessons.length) {
             this.collectSizeTotal(index);
         } else if (index >= this.state.lessons.length) {
             this.setState(this.state);
@@ -240,7 +233,10 @@ export default class Main {
 
         this.collectCourseData();
 
-        this.storage = new SStorage(this.id, this.state);
+        this.storage = new SStorage(this.id, {
+            lessons: {},
+            is_open: true,
+        });
 
         let lessons = this.collectLessonData();
         this.setState({ lessons });
