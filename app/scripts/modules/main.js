@@ -18,6 +18,8 @@ export default class Main {
         this.storage = null;
     }
 
+    // === Служебные ===
+
     setState(new_state) {
         Object.assign(this.state, new_state);
 
@@ -51,6 +53,10 @@ export default class Main {
         return res[1];
     }
 
+    // --- Служебные ---
+
+    // === Сбор данных ===
+
     collectCourseData() {
         let course_id = document.querySelector('.standard-block[data-id]').dataset.id;
         let course_name = document.querySelector('.breadcrumbs__a_active').textContent;
@@ -58,7 +64,7 @@ export default class Main {
         this.id = `id_${course_id}` || course_name;
     }
 
-    collectLessonData() {
+    collectLessonsData() {
         let lesson_elems = document.querySelectorAll('#lessons-list li');
         let lessons = [];
 
@@ -84,31 +90,6 @@ export default class Main {
         return lessons;
     }
 
-    // --- Хранилище ---
-    storeLessonSave(index) {
-        let lessons = this.storage.get('lessons');
-        if (!lessons[index]) lessons[index] = {};
-
-        lessons[index].size_total = this.state.lessons[index].size_total;
-
-        this.storage.set('lessons', lessons);
-    }
-
-    storeLessonRestore() {
-        let lessons = this.storage.get('lessons');
-
-        for (let index in lessons) {
-            this.state.lessons[index].is_loaded = true;
-            this.state.lessons[index].progress = 100;
-            this.state.lessons[index].size_total = lessons[index].size_total;
-            this.state.lessons[index].size_loaded = lessons[index].size_total;
-        }
-
-        this.setState(this.state);
-    }
-
-    // === Хранилище ===
-
     async collectSizeTotal(index = 0) {
         let lesson = this.state.lessons[index];
         let size_total = await loader.request(lesson.url, { method: 'HEAD' });
@@ -122,6 +103,52 @@ export default class Main {
             this.setState(this.state);
         }
     }
+
+    // --- Сбор данных ---
+
+    // === Хранилище ===
+    storeLessonSave(index) {
+        let lessons = this.storage.get('lessons');
+        if (!lessons[index]) lessons[index] = {};
+
+        lessons[index].size_total = this.state.lessons[index].size_total;
+
+        this.storage.set('lessons', lessons);
+    }
+
+    storeLessonsRestore() {
+        let state = Object.assign({}, this.state);
+        let lessons = this.storage.get('lessons');
+
+        for (let index in lessons) {
+            state.lessons[index].is_loaded = true;
+            state.lessons[index].progress = 100;
+            state.lessons[index].size_total = lessons[index].size_total;
+            state.lessons[index].size_loaded = lessons[index].size_total;
+        }
+
+        this.setState(state);
+    }
+
+    storeLessonsClear() {
+        let state = Object.assign({}, this.state);
+        this.storage.set('lessons', {});
+
+        state.lessons.forEach(lesson => {
+            lesson.is_loaded = false;
+            if (!lesson.is_loading) {
+                lesson.progress = 0;
+                lesson.size_loaded = 0;
+            }
+        });
+
+        this.setState(state);
+    }
+
+    // --- Хранилище ---
+
+    // === Закачка ===
+    // === Закачка: обработчики ===
 
     loadProgress(index, e) {
         let loaded = e.loaded;
@@ -137,8 +164,6 @@ export default class Main {
     }
 
     loadLoaded(index, e) {
-        console.log('loded_event: ', index, e);
-
         let state = Object.assign({}, this.state);
         let lesson = state.lessons[index];
 
@@ -153,16 +178,15 @@ export default class Main {
     }
 
     loadEnd() {
-        console.log('loadLoop завершен');
-
         let state = Object.assign({}, this.state);
         state.is_loading = false;
         this.setState(state);
     }
 
+    // --- Закачка: обработчики --- 
 
     async loadLesson(index) {
-        if (index === undefined) return;
+        if (index === undefined) this.loadEnd();
 
         let lesson = this.state.lessons[index];
         let loded_event;
@@ -171,7 +195,6 @@ export default class Main {
         try {
             loded_event = await window.loader.request(lesson.url, {
                 responseType: 'arraybuffer',
-                // responseType: 'blob',
             }, this.loadProgress.bind(this, index));
 
             this.loadLoaded(index, loded_event);
@@ -180,7 +203,6 @@ export default class Main {
 
             if (error.type === 'abort') {
                 let state = Object.assign({}, this.state);
-                state.is_loading = false;
                 state.lessons.map(lesson => {
                     if (lesson.is_loading) {
                         lesson.is_loading = false;
@@ -194,7 +216,6 @@ export default class Main {
                 this.setState(state);
                 return false;
             }
-
         }
 
         this.loadLoop();
@@ -202,8 +223,12 @@ export default class Main {
 
     async loadLoop() {
         let index;
+
+        // Поиск первого попавшегося урока, отмеченного для скачивания
         for (let i = 0; i < this.state.lessons.length; i++) {
             let lesson = this.state.lessons[i];
+
+            // Если урок с таким индексом существует, он отмечен, еще не загружен и не в процессе загрузки
             if (lesson && lesson.is_checked && !lesson.is_loaded && !lesson.is_loading) {
                 index = i;
                 this.loadLesson(index);
@@ -226,7 +251,11 @@ export default class Main {
 
     loadStop() {
         window.loader.abort();
+
+        this.loadEnd();
     }
+
+    // --- Закачка ---
 
     init() {
         console.log('%c%s', (window.log_color) ? window.log_color.blue : '', `*CourseLoader* init`);
@@ -238,10 +267,10 @@ export default class Main {
             is_open: true,
         });
 
-        let lessons = this.collectLessonData();
+        let lessons = this.collectLessonsData();
         this.setState({ lessons });
 
-        this.storeLessonRestore();
+        this.storeLessonsRestore();
 
         this.collectSizeTotal();
     }
