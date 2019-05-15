@@ -20,6 +20,8 @@ export default function Template(that) {
             .course_loader_container .toggle-aside.course_loader_btn {
                 position: static;
                 border: none;
+                padding-left: 1.5em;
+                padding-right: 1.5em;
             }
 
             .course_loader_container .toggle-aside.course_loader_btn[disabled] {
@@ -60,6 +62,12 @@ export default function Template(that) {
             .course_loader_container .lesson_info {
                 margin-left: 5px;
                 white-space: nowrap;
+            }
+
+            .course_loader_container .btn_container {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
             }
 
             .course_loader_container .checkbox_master_container {

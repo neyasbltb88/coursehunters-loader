@@ -107,6 +107,13 @@ export default class Main {
     // --- Сбор данных ---
 
     // === Хранилище ===
+    storeInit() {
+        this.storage = new SStorage(this.id, {
+            lessons: {},
+            is_open: true,
+        });
+    }
+
     storeLessonSave(index) {
         let lessons = this.storage.get('lessons');
         if (!lessons[index]) lessons[index] = {};
@@ -117,6 +124,12 @@ export default class Main {
     }
 
     storeLessonsRestore() {
+        if (localStorage.getItem(this.id)) {
+            this.storeInit();
+        } else {
+            return;
+        }
+
         let state = Object.assign({}, this.state);
         let lessons = this.storage.get('lessons');
 
@@ -246,6 +259,8 @@ export default class Main {
         state.is_loading = true;
         this.setState(state);
 
+        this.storeInit();
+
         this.loadLoop();
     }
 
@@ -261,11 +276,6 @@ export default class Main {
         console.log('%c%s', (window.log_color) ? window.log_color.blue : '', `*CourseLoader* init`);
 
         this.collectCourseData();
-
-        this.storage = new SStorage(this.id, {
-            lessons: {},
-            is_open: true,
-        });
 
         let lessons = this.collectLessonsData();
         this.setState({ lessons });

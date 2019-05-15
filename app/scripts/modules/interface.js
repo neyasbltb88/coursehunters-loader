@@ -13,6 +13,7 @@ export default class Interface {
             btn_title_disabled: 'Выделите уроки для скачивания',
             checkbox_master: 'Выделить все',
             checkbox_master_checked: 'Снять выделение',
+            clear_history_btn: 'Очистить историю скачиваний',
         };
 
         this.rendered_state = {
@@ -138,6 +139,24 @@ export default class Interface {
         this.outputRender('.btn_container', checkboxMaster);
     }
 
+    handlerClearHistoryBtn(e) {
+        e.preventDefault();
+
+        this.main.storeLessonsClear();
+
+        return false;
+    }
+
+    renderClearHistoryBtn() {
+        let clear_history_btn = document.createElement('a');
+        clear_history_btn.className = 'clear_history_btn';
+        clear_history_btn.href = '#';
+        clear_history_btn.textContent = this.text.clear_history_btn;
+        clear_history_btn.addEventListener('click', e => this.handlerClearHistoryBtn(e));
+
+        this.outputRender('.btn_container', clear_history_btn, true);
+    }
+
     render() {
         for (let index = 0; index < this.main.state.lessons.length; index++) {
             this.renderLesson(index);
@@ -145,6 +164,7 @@ export default class Interface {
 
         this.renderBtn();
         this.renderCheckboxMaster();
+        this.renderClearHistoryBtn();
     }
 
 
