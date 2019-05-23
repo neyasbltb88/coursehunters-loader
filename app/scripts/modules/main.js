@@ -64,6 +64,27 @@ export default class Main {
         this.id = `id_${course_id}` || course_name;
     }
 
+    collectAttachment(index = 0) {
+        let attachment_elem = document.querySelector('a.downloads');
+        let attachment = {};
+
+        if (!attachment_elem) return false;
+
+        attachment.index = index;
+        attachment.url = attachment_elem.href;
+        attachment.name = this.fileNameNormalize(attachment_elem.textContent);
+        attachment.ext = this.fileNameExt(attachment.url);
+        attachment.mime = '';
+        attachment.size_loaded = 0;
+        attachment.size_total = 0;
+        attachment.progress = 0;
+        attachment.is_loaded = false;
+        attachment.is_loading = false;
+        attachment.is_checked = true;
+
+        return attachment;
+    }
+
     collectLessonsData() {
         let lesson_elems = document.querySelectorAll('#lessons-list li');
         let lessons = [];
@@ -86,6 +107,11 @@ export default class Main {
 
             lessons.push(lesson_data);
         });
+
+        let attachment = this.collectAttachment(lessons.length);
+        if (attachment) {
+            lessons.push(attachment);
+        }
 
         return lessons;
     }
