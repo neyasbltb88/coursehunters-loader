@@ -43,10 +43,12 @@ export default class Main {
     async collectSizeTotal(index = 0) {
         let lesson = this.state.lessons[index];
 
-        if (!lesson.size_total) {
+        if (!lesson.size_total && lesson.url) {
             let size_total = await loader.request(lesson.url, { method: 'HEAD' });
             lesson.size_total = size_total.total;
             lesson.mime = size_total.target.getResponseHeader('Content-Type');
+        } else if (lesson.collectMethod) {
+            await lesson.collectMethod(lesson);
         }
 
         index++;
@@ -158,21 +160,37 @@ export default class Main {
 
         let lesson = this.state.lessons[index];
         let loded_event;
-        lesson.is_loading = true;
 
+        // Если у айтема нет url, но есть поле data
         if (!lesson.url && lesson.data) {
-            this.loadLoaded(index, {
+            lesson.is_loading = true;
+
+            loded_event = {
                 target: {
                     response: lesson.data
                 }
-            });
+            };
+
+            // Если у айтема нет url, нет поля data, но есть метод, заполняющий поле data
+        } else if (!lesson.url && !lesson.data && lesson.collectMethod) {
+            lesson.is_loading = true;
+
+            await lesson.collectMethod(lesson);
+
+            loded_event = {
+                target: {
+                    response: lesson.data
+                }
+            };
+
+            // Если у айтема есть url
         } else if (lesson.url) {
+            lesson.is_loading = true;
+
             try {
                 loded_event = await window.loader.request(lesson.url, {
                     responseType: 'arraybuffer',
                 }, this.loadProgress.bind(this, index));
-
-                this.loadLoaded(index, loded_event);
             } catch (error) {
                 console.log('Ошибка загрузки: ', error);
 
@@ -192,7 +210,15 @@ export default class Main {
                     return false;
                 }
             }
+
+            // Если у айтема нет ни url, ни data
+        } else {
+
         }
+
+        if (!loded_event) this.loadLoop();
+
+        this.loadLoaded(index, loded_event);
 
         this.loadLoop();
     }

@@ -1,4 +1,12 @@
 export default class Utils {
+    static blob2base64(blob) {
+        return new Promise(resolve => {
+            let reader = new FileReader();
+            reader.onload = e => resolve(e.target.result);
+            reader.readAsDataURL(blob);
+        });
+    }
+
     static StrBytes(str) {
         var bytes = 0,
             len = str.length,

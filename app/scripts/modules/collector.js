@@ -1,4 +1,5 @@
 export default class Collector {
+    // Фильтрует строки на предмет недопустимых символов для использования в качестве имени файла
     fileNameNormalize(value) {
         let new_value = value.split('');
         let template = {
@@ -18,6 +19,7 @@ export default class Collector {
         return new_value.join('');
     }
 
+    // Возвращает расширение файла из пути к нему (https://site.com/code.zip -> .zip)
     fileNameExt(url) {
         // https://regex101.com/r/fIgKBo/1
         const regex = /.*(\.\w*)/i;
@@ -26,6 +28,15 @@ export default class Collector {
         return res[1];
     }
 
+    // Загружает картинку по url и возвращает ее в виде base64;
+    async imgUrl2base64(url) {
+        let res = await window.loader.request(url, { responseType: 'blob' });
+        let b64 = await window.utils.blob2base64(res.target.response);
+
+        return b64;
+    }
+
+    // Собирает айтем списка для Материалов курса
     collectAttachment(index = 0) {
         let attachment_elem = document.querySelector('a.downloads');
         let attachment = {};
@@ -47,20 +58,9 @@ export default class Collector {
         return attachment;
     }
 
-    collectInfoPage(index = 0) {
-        let info_page = {};
-
-        info_page.index = index;
-        info_page.name = 'Информация о курсе';
-        info_page.ext = '.html';
-        info_page.mime = 'text/html';
-        info_page.size_loaded = 0;
-        info_page.size_total = 0;
-        info_page.progress = 0;
-        info_page.is_loaded = false;
-        info_page.is_loading = false;
-        info_page.is_checked = true;
-        info_page.data = /* html */ `
+    // Генерирует содержимое страницы информации о курсе
+    async infoPageContent() {
+            return /* html */ `
         <!DOCTYPE html>
         <html lang="ru">
         
@@ -74,15 +74,28 @@ export default class Collector {
                 ${document.querySelector('head style').textContent}
 
                 body {
-                    background-image: url(https://coursehunters.net/images/background.png);
+                    background-image: url(${await this.imgUrl2base64('https://coursehunters.net/images/background.png')});
                 }
 
                 header.standard-block {
                     display: flex;
                 }
 
+                header.standard-block .header_img {
+                    min-width: 250px;
+                    align-self: center;
+                }
+
+                header.standard-block .header_img img {
+                    display: block;
+                }
+
                 header.standard-block .header_info {
                     padding-left: 15px;
+                }
+
+                header.standard-block .standard-block__date {
+                    position: relative;
                 }
 
                 .lessons-list__li:hover {
@@ -118,6 +131,7 @@ export default class Collector {
                             <!-- Хлебные крошки -->
                             ${(() => {
                                 let breadcrumb = document.querySelector('.standard-block[itemtype="https://schema.org/BreadcrumbList"]').cloneNode(true);
+                                // Удаление этого класса делает активной ссылку на текущий курс
                                 breadcrumb.querySelector('.breadcrumbs > a').classList.remove('breadcrumbs__a_active');
 
                                 return breadcrumb.outerHTML;
@@ -125,20 +139,49 @@ export default class Collector {
 
                             <!-- Блок заголовка -->
                             <header class="standard-block">
-                                <img src="${document.querySelector('#lessons-list [itemprop="thumbnail"]').href}" width="250" height="150">
+                                <div class="header_img">
+                                    <img src="${await this.imgUrl2base64(document.querySelector('#lessons-list [itemprop="thumbnail"]').href)}" width="250" height="150">
+                                </div>
                                 <div class="header_info">
-                                    ${document.querySelector('header.standard-block').innerHTML}
+                                    ${(() => {
+                                        let header = document.querySelector('header.standard-block').cloneNode(true);
+
+                                        // Получаем дату добавления первого и последнего урок
+                                        let start_date = document.querySelector('.standard-block[data-id] .lessons-list__li:first-child [itemprop="uploadDate"]');
+                                        let end_date = document.querySelector('.standard-block[data-id] .lessons-list__li:last-child [itemprop="uploadDate"]');
+
+                                        // Оставляем только число и отрезаем время
+                                        start_date = start_date.getAttribute('content').split(' ')[0].split('-').reverse().join('-');
+                                        end_date = end_date.getAttribute('content').split(' ')[0].split('-').reverse().join('-');
+
+                                        // Если даты совпадают, оставляем одну, если нет - то отобразим период
+                                        let date_content = (start_date === end_date) ? end_date : `${start_date} - ${end_date}`;
+
+                                        let date = document.createElement('div');
+                                        date.className = 'standard-block__duration standard-block__date';
+                                        date.textContent = date_content;
+
+                                        // Добавим блок с датой после заголовка курса
+                                        header.firstElementChild.after(date);
+
+                                        return header.innerHTML.replace('Duration', 'Продолжительность курса');
+                                    })()}
                                 </div>
                             </header>
 
                             <!-- Список уроков -->
                             ${(() => {
+                                // Берем полный блок с плеером, заголовком и списком уроков
                                 let lessons_block = document.querySelector('.standard-block[data-id]').cloneNode(true);
+                                // Клонируем заголовок и список уроков
                                 let title = lessons_block.querySelector('h2').cloneNode(true);
                                 let details = lessons_block.querySelector('details').cloneNode(true);
+                                // Делаем список уроков открытым
                                 details.open = true;
 
+                                // Очищаем полный блок
                                 lessons_block.innerHTML = '';
+                                // И добавляем в него обратно только заголовок и список уроков
                                 lessons_block.appendChild(title);
                                 lessons_block.appendChild(details);
 
@@ -149,8 +192,10 @@ export default class Collector {
                             ${(() => {
                                 let attachment_link = document.querySelector('a.downloads');
                                 if(attachment_link) {
-                                    return attachment_link.parentElement.outerHTML;
+                                    // Если есть ссылки на материалы к уроку, то в этом месте будет блок с материалами
+                                    return attachment_link.closest('.standard-block').outerHTML;
                                 } else {
+                                    // Иначе блока не будет
                                     return '';
                                 }
                             })()}
@@ -159,8 +204,10 @@ export default class Collector {
                             ${(() => {
                                 let description = document.querySelector('.standard-block p');
                                 if(description) {
+                                    // Если есть блок с описанием курса, то в этом месте будет этот блок
                                     return description.closest('.standard-block').outerHTML;
                                 } else {
+                                    // Иначе блока не будет
                                     return '';
                                 }
                             })()}
@@ -171,8 +218,10 @@ export default class Collector {
                                 if(rating) {
                                     rating = rating.closest('.standard-block').cloneNode(true);
                                     rating.querySelector('h2').textContent = 'Оценка курса';
+                                    // Если есть блок с оценкой курса, то в этом месте будет этот блок
                                     return rating.outerHTML;
                                 } else {
+                                    // Иначе блока не будет
                                     return '';
                                 }
                             })()}
@@ -185,6 +234,7 @@ export default class Collector {
             <div class="toggle-aside_light"></div>
 
             <script>
+                // Кнопка переключения темной темы
                 let theme_btn = document.querySelector('.toggle-aside_light');
                 theme_btn.addEventListener('click', () => {
                     document.body.classList.toggle('theme_dark');
@@ -192,12 +242,39 @@ export default class Collector {
             </script>
         </body>
         </html>`;
+    }
 
-        info_page.size_total = window.utils.StrBytes(info_page.data);
+    // Метод сбора страницы информации о курсе и ее размера в байтах
+    async collectInfoPage(lesson) {
+        if (!lesson) return;
+
+        lesson.data = await this.infoPageContent();
+        lesson.size_total = window.utils.StrBytes(lesson.data);
+    }
+
+    // Собирает шаблон айтема списка для Информации о курсе
+    infoPageItem(index = 0) {
+        let info_page = {};
+
+        info_page.index = index;
+        info_page.name = 'Информация о курсе';
+        info_page.ext = '.html';
+        info_page.mime = 'text/html';
+        info_page.size_loaded = 0;
+        info_page.size_total = 0;
+        info_page.progress = 0;
+        info_page.is_loaded = false;
+        info_page.is_loading = false;
+        info_page.is_checked = true;
+        info_page.data = '';
+        // Контент страницы информации будет создан после вызова этого метода
+        // Если бы контент собирался здесь, то в него не попадал бы блок с оценкой курса 
+        info_page.collectMethod = this.collectInfoPage.bind(this);
 
         return info_page;
     }
 
+    // Сбор айтемов списка с уроками курса
     collectLessonsData() {
         let lesson_elems = document.querySelectorAll('#lessons-list li');
         let lessons = [];
@@ -221,12 +298,14 @@ export default class Collector {
             lessons.push(lesson_data);
         });
 
+        // Добавтить в список айтемов Материалы курса
         let attachment = this.collectAttachment(lessons.length);
         if (attachment) {
             lessons.push(attachment);
         }
 
-        let info_page = this.collectInfoPage(lessons.length);
+        // Добавить в список айтемов Информацию о курсе
+        let info_page = this.infoPageItem(lessons.length);
         lessons.push(info_page);
 
         return lessons;

@@ -41,12 +41,14 @@ export default class Interface {
         let parent = document.querySelector(parent_selector);
         let prev_selector;
 
+        // Если новый элемент имеет атрибут data-render, то элемент полностью обновится,
+        // игнорируя флаг text_content
         if (new_elem.dataset.render) {
             text_content = false;
+            delete new_elem.dataset.render;
         }
 
-        delete new_elem.dataset.render;
-
+        // Составление сектора нового элемента для поиска его старой версии по такому же селектору
         if (new_elem.id) {
             prev_selector = new_elem.id;
         } else {
@@ -56,14 +58,14 @@ export default class Interface {
 
         let prev = parent.querySelector(prev_selector);
 
-
-        if (prev && !text_content) {
+        if (!prev) {
+            // Если еще не блыо такого элемента, то добавить в конец родительского
+            parent.appendChild(new_elem);
+        } else if (prev && !text_content) {
+            // Если элемент был, и нужно рендерить полностью, заменяем элемент
             prev.replaceWith(new_elem);
-        } else if (!prev && !text_content) {
-            parent.appendChild(new_elem);
-        } else if (!prev && text_content) {
-            parent.appendChild(new_elem);
         } else if (prev && text_content) {
+            // Если элемент был, и нужно обноить только текстовое содержимое в нем
             prev.textContent = new_elem.textContent;
         }
     }
@@ -129,11 +131,9 @@ export default class Interface {
     }
 
     renderCheckboxMaster() {
-        let all_cheked = this.main.state.lessons.every(lesson => lesson.is_checked);
-        if (all_cheked === this.rendered_state.checkboxMaster) return;
-        this.rendered_state.checkboxMaster = all_cheked;
+        let checkboxMaster = this.template.checkboxMaster();
+        if (!checkboxMaster) return;
 
-        let checkboxMaster = this.template.checkboxMaster(all_cheked);
         checkboxMaster.addEventListener('change', (e) => this.handlerCheckboxMaster(e));
 
         this.outputRender('.btn_container', checkboxMaster);
