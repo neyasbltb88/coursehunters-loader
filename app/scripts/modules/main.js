@@ -1,5 +1,6 @@
 import Interface from './interface';
 import SStorage from './storage';
+import Collector from './collector';
 
 export default class Main {
     constructor() {
@@ -15,6 +16,8 @@ export default class Main {
             main: this,
         });
 
+        this.collector = new Collector();
+
         this.storage = null;
     }
 
@@ -24,33 +27,6 @@ export default class Main {
         Object.assign(this.state, new_state);
 
         this.interface.render();
-    }
-
-    fileNameNormalize(value) {
-        let new_value = value.split('');
-        let template = {
-            '\\': '_',
-            '/': '_',
-            ':': '-',
-            '*': '_',
-            '?': '7',
-            '"': '\'',
-            '<': '{',
-            '>': '}',
-            '|': ' l ',
-        };
-
-        new_value = new_value.map(char => template[char] || char);
-
-        return new_value.join('');
-    }
-
-    fileNameExt(url) {
-        // https://regex101.com/r/fIgKBo/1
-        const regex = /.*(\.\w*)/i;
-        let res = url.match(regex);
-
-        return res[1];
     }
 
     // --- Служебные ---
@@ -64,63 +40,14 @@ export default class Main {
         this.id = `id_${course_id}` || course_name;
     }
 
-    collectAttachment(index = 0) {
-        let attachment_elem = document.querySelector('a.downloads');
-        let attachment = {};
-
-        if (!attachment_elem) return false;
-
-        attachment.index = index;
-        attachment.url = attachment_elem.href;
-        attachment.name = this.fileNameNormalize(attachment_elem.textContent);
-        attachment.ext = this.fileNameExt(attachment.url);
-        attachment.mime = '';
-        attachment.size_loaded = 0;
-        attachment.size_total = 0;
-        attachment.progress = 0;
-        attachment.is_loaded = false;
-        attachment.is_loading = false;
-        attachment.is_checked = true;
-
-        return attachment;
-    }
-
-    collectLessonsData() {
-        let lesson_elems = document.querySelectorAll('#lessons-list li');
-        let lessons = [];
-
-        lesson_elems.forEach(lesson => {
-            let lesson_data = {};
-            let lesson_name = lesson.querySelector('[itemprop="name"]').textContent;
-
-            lesson_data.index = lessons.length;
-            lesson_data.url = lesson.querySelector('[itemprop="url"]').href;
-            lesson_data.name = this.fileNameNormalize(lesson_name);
-            lesson_data.ext = this.fileNameExt(lesson_data.url);
-            lesson_data.mime = '';
-            lesson_data.size_loaded = 0;
-            lesson_data.size_total = 0;
-            lesson_data.progress = 0;
-            lesson_data.is_loaded = false;
-            lesson_data.is_loading = false;
-            lesson_data.is_checked = true;
-
-            lessons.push(lesson_data);
-        });
-
-        let attachment = this.collectAttachment(lessons.length);
-        if (attachment) {
-            lessons.push(attachment);
-        }
-
-        return lessons;
-    }
-
     async collectSizeTotal(index = 0) {
         let lesson = this.state.lessons[index];
-        let size_total = await loader.request(lesson.url, { method: 'HEAD' });
-        lesson.size_total = size_total.total;
-        lesson.mime = size_total.target.getResponseHeader('Content-Type');
+
+        if (!lesson.size_total) {
+            let size_total = await loader.request(lesson.url, { method: 'HEAD' });
+            lesson.size_total = size_total.total;
+            lesson.mime = size_total.target.getResponseHeader('Content-Type');
+        }
 
         index++;
         if (index < this.state.lessons.length) {
@@ -208,6 +135,8 @@ export default class Main {
 
         lesson.is_loaded = true;
         lesson.is_loading = false;
+        lesson.size_loaded = lesson.size_total;
+        lesson.progress = '100';
 
         window.Downloader(new Blob([e.target.response]), lesson.name + lesson.ext, lesson.mime);
 
@@ -231,29 +160,37 @@ export default class Main {
         let loded_event;
         lesson.is_loading = true;
 
-        try {
-            loded_event = await window.loader.request(lesson.url, {
-                responseType: 'arraybuffer',
-            }, this.loadProgress.bind(this, index));
+        if (!lesson.url && lesson.data) {
+            this.loadLoaded(index, {
+                target: {
+                    response: lesson.data
+                }
+            });
+        } else if (lesson.url) {
+            try {
+                loded_event = await window.loader.request(lesson.url, {
+                    responseType: 'arraybuffer',
+                }, this.loadProgress.bind(this, index));
 
-            this.loadLoaded(index, loded_event);
-        } catch (error) {
-            console.log('Ошибка загрузки: ', error);
+                this.loadLoaded(index, loded_event);
+            } catch (error) {
+                console.log('Ошибка загрузки: ', error);
 
-            if (error.type === 'abort') {
-                let state = Object.assign({}, this.state);
-                state.lessons.map(lesson => {
-                    if (lesson.is_loading) {
-                        lesson.is_loading = false;
-                        lesson.progress = 0;
-                        lesson.size_loaded = 0;
-                    }
+                if (error.type === 'abort') {
+                    let state = Object.assign({}, this.state);
+                    state.lessons.map(lesson => {
+                        if (lesson.is_loading) {
+                            lesson.is_loading = false;
+                            lesson.progress = 0;
+                            lesson.size_loaded = 0;
+                        }
 
-                    return lesson;
-                });
+                        return lesson;
+                    });
 
-                this.setState(state);
-                return false;
+                    this.setState(state);
+                    return false;
+                }
             }
         }
 
@@ -303,7 +240,7 @@ export default class Main {
 
         this.collectCourseData();
 
-        let lessons = this.collectLessonsData();
+        let lessons = this.collector.collectLessonsData();
         this.setState({ lessons });
 
         this.storeLessonsRestore();
